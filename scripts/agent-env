@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Source this (do not execute it) to keep every cache, tool and app profile inside the repo:
+#     source scripts/agent-env
+# The session rule is "write only inside the repository" (decision 012). Plain `make` and `go` do not
+# need this: people use their normal Go caches. AI-agent sessions should source it first.
+# Everything it points at is git-ignored (.cache/, .tools/). Delete .cache/ to reclaim the space.
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+export PATH="$root/.tools/bin:$PATH"
+case ":$PATH:" in *":/usr/local/go/bin:"*) ;; *) [ -d /usr/local/go/bin ] && export PATH="$PATH:/usr/local/go/bin" ;; esac
+export GOPATH="$root/.cache/gopath" GOCACHE="$root/.cache/gocache" GOMODCACHE="$root/.cache/gomod" GOFLAGS="-modcacherw"
+# The app's own WebKit/GTK profile (Linux). On Windows the WebView2 profile is under %APPDATA% and cannot be redirected this way.
+export XDG_DATA_HOME="$root/.cache/xdg/data" XDG_CACHE_HOME="$root/.cache/xdg/cache" XDG_CONFIG_HOME="$root/.cache/xdg/config"
+mkdir -p "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME"
+cd "$root" || return 1

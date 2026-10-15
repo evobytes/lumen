@@ -1,0 +1,36 @@
+# nfpm spec for the Linux .deb (scripts/build-deb). Files under os/ are appended by the script.
+name: lumen
+arch: ${GOARCH}
+platform: linux
+version: ${VERSION}
+section: video
+priority: optional
+maintainer: Evobytes Consulting Ltd <dave.bevan@evobytes.co.uk>
+description: |
+  Lumen presentation projector: a control window, a floating output window
+  and an embedded web API for projecting lyrics, slides and media.
+vendor: Evobytes Consulting Ltd
+homepage: https://github.com/evobytes/lumen
+license: Apache-2.0
+depends:
+  - libgtk-4-1
+  - libwebkitgtk-6.0-4
+  # WebKitGTK only *suggests* these, so a bare install cannot play H.264/AAC/HEVC/AV1
+  # video: verified on Ubuntu 24.04. See docs/research/integrations-assessment.md.
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-libav
+recommends:
+  - gstreamer1.0-plugins-bad
+contents:
+  - src: dist/pkg/lumen
+    dst: /usr/bin/lumen
+    file_info:
+      mode: 0755
+  - src: packaging/copyright
+    dst: /usr/share/doc/lumen/copyright
+  - src: LICENSE
+    dst: /usr/share/doc/lumen/LICENSE
+  - src: NOTICE
+    dst: /usr/share/doc/lumen/NOTICE
+  - src: THIRD_PARTY_NOTICES.md
+    dst: /usr/share/doc/lumen/THIRD_PARTY_NOTICES.md

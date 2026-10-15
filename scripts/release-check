@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Verify a release tag matches VERSION: scripts/release-check vX.X.X
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+tag=${1:?usage: release-check vX.X.X}
+eval "$("$root/scripts/version")"
+if [[ $tag != "v$VERSION" ]]; then
+  echo "tag $tag does not match VERSION $VERSION (want v$VERSION)" >&2
+  exit 1
+fi
+if [[ $GIT_HASH == *-dirty ]]; then
+  echo "working tree is dirty ($GIT_HASH); release from a clean checkout" >&2
+  exit 1
+fi
+echo "release $tag ok"

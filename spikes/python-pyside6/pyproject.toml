@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lumen-projector"
+dynamic = ["version"]
+description = "Cross-platform presentation projector: control window, floating output window and an integrated web API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "PySide6-Essentials>=6.7",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
+[project.scripts]
+lumen = "lumen.app:main"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pyinstaller>=6.6",
+    "pytest>=8",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+]
+
+[tool.hatch.version]
+path = "src/lumen/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lumen"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/lumen/api/remote_ui.py" = ["E501"]  # embedded HTML

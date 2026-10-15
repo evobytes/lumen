@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Single source for version and build-stamp values.
+# Prints one line of KEY=VALUE pairs, safe for `eval "$(scripts/version)"`
+# and for make's $(shell ...). BUILD_STAMP may be pre-set to reproduce a run.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+version=$(tr -d '[:space:]' <"$root/VERSION")
+if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "VERSION must be x.x.x (digits only), got '$version'" >&2
+  exit 1
+fi
+
+stamp=${BUILD_STAMP:-$(date -u +%Y%m%d-%H%M%S)}
+
+if ! git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
+  hash=nogit
+elif ! hash=$(git -C "$root" rev-parse --short=7 HEAD 2>/dev/null); then
+  hash=nocommit
+elif [[ -n $(git -C "$root" status --porcelain 2>/dev/null) ]]; then
+  hash+=-dirty
+fi
+
+echo "VERSION=$version GIT_HASH=$hash BUILD_STAMP=$stamp ARTIFACT_SUFFIX=$stamp-$hash"

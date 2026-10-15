@@ -1,0 +1,10 @@
+{
+  // Git Bash is the build shell on Windows: `make` and scripts/* need bash (see the dev-loop skill).
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "files.eol": "\n",
+  "go.toolsManagement.autoUpdate": false,
+  "gopls": {
+    "formatting.gofumpt": true,
+    "formatting.local": "github.com/evobytes/lumen"
+  }
+}

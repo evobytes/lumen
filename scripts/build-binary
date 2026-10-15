@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Build the lumen binary: scripts/build-binary <goos> <goarch> [console]
+#
+#   windows  CGO-free, cross-compiles from any host. Embeds the icon, version info
+#            and the per-monitor-v2 DPI manifest (resource file made by `wails3 generate syso`).
+#            Default is the GUI subsystem (-H windowsgui); `console` keeps a console so
+#            logs and exit codes are visible (used by the self-test and CI).
+#   linux / darwin  need CGO (GTK4 + WebKitGTK 6 / Cocoa + WebKit), so they build natively
+#            only: the host GOOS/GOARCH must match.
+#
+# Output: dist/bin/lumen_<goos>_<goarch>[.exe]   (console variant: lumen-console_...)
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+goos=${1:?usage: build-binary <goos> <goarch> [console]}
+goarch=${2:?usage: build-binary <goos> <goarch> [console]}
+variant=${3:-}
+export PATH="$root/.tools/bin:$PATH"
+eval "$("$root/scripts/version")"
+cd "$root"
+mod=$(go list -m)
+
+name=lumen
+[[ $variant == console ]] && name=lumen-console
+ext=""
+[[ $goos == windows ]] && ext=".exe"
+out="$root/dist/bin/${name}_${goos}_${goarch}${ext}"
+mkdir -p "$(dirname "$out")"
+
+ldflags="-s -w -X $mod/internal/version.Version=$VERSION -X $mod/internal/version.Commit=$GIT_HASH -X $mod/internal/version.Built=$BUILD_STAMP"
+
+case $goos in
+  windows)
+    [[ $variant == console ]] || ldflags="$ldflags -H windowsgui"
+    command -v wails3 >/dev/null || { echo "wails3 not found; run 'make bootstrap'" >&2; exit 1; }
+    syso="$root/cmd/lumen/zz_windows_${goarch}.syso"
+    # Version info is generated from VERSION so the exe's properties never drift.
+    info="$root/dist/info_${goarch}.json"
+    sed "s/@VERSION@/$VERSION/g" "$root/packaging/windows/info.json.in" >"$info"
+    trap 'rm -f "$syso" "$info"' EXIT
+    (cd "$root/packaging/windows" && wails3 generate syso -arch "$goarch" -icon icon.ico \
+      -manifest lumen.exe.manifest -info "$info" -out "$syso") >/dev/null
+    CGO_ENABLED=0 GOOS=windows GOARCH=$goarch go build -trimpath -ldflags "$ldflags" -o "$out" ./cmd/lumen
+    ;;
+  linux | darwin)
+    if [[ $goos != "$(go env GOHOSTOS)" || $goarch != "$(go env GOHOSTARCH)" ]]; then
+      echo "build-binary: $goos/$goarch needs CGO and so must be built natively (host is $(go env GOHOSTOS)/$(go env GOHOSTARCH))" >&2
+      exit 1
+    fi
+    CGO_ENABLED=1 go build -trimpath -ldflags "$ldflags" -o "$out" ./cmd/lumen
+    ;;
+  *)
+    echo "build-binary: unsupported GOOS $goos" >&2
+    exit 2
+    ;;
+esac
+echo "built $out"

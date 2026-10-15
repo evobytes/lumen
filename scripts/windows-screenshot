@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# From WSL2: screenshot every monitor of the Windows host into a PNG (default dist/selftest/desktop.png).
+#   scripts/windows-screenshot [out.png]
+# Uses WSL interop; writes only to the path you give (inside the repo by default).
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+out=${1:-$root/dist/selftest/desktop.png}
+mkdir -p "$(dirname "$out")"
+command -v powershell.exe >/dev/null || { echo "WSL interop is not available (see docs/windows-dev.md)" >&2; exit 1; }
+cd /mnt/c
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$root/scripts/windows-screenshot.ps1")" -Out "$(wslpath -w "$(realpath -m "$out")")" | tr -d '\r'

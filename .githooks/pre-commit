@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# pre-commit: keep documentation current. Install once per clone: make hooks.
+#
+#   1. coupling   behavior files staged but no hand-written doc staged -> stop
+#                 (commit with DOCS_REVIEWED=1 when nothing needs documenting)
+#   2. generate   regenerate generated docs from their sources and stage any that changed
+#                 (config reference + shipped config files, make targets, skills index,
+#                 package table, docs/versions.md) - see scripts/docgen
+#   3. lint       stale links, paths, make targets and env vars named in docs; skill
+#                 frontmatter; vendored versions vs pins; changelog; decision numbering
+# CI (make ci -> make docs-check) is the backstop if this is skipped (--no-verify).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+# 1. Judge what the author staged, before generation adds generated files to the index.
+go run ./scripts/docgen staged
+
+# 2. Regenerate; stage whatever changed (stdout lists the changed paths).
+changed=$(go run ./scripts/docgen generate 2>/dev/null)
+if [[ -n $changed ]]; then
+  # shellcheck disable=SC2086
+  git add -- $changed
+  echo "pre-commit: regenerated and staged:"
+  printf '  %s\n' $changed
+fi
+
+# 3. Everything that cannot be generated must be true.
+go run ./scripts/docgen lint

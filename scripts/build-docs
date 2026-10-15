@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Regenerate and check the documentation, then write a reproducible docs bundle:
+#   scripts/build-docs
+# Output: dist/lumen-docs_<x.x.x>_<yyyymmdd-hhmmss>-<githash>.zip
+# The bundle is README, CHANGELOG, licences and docs/**/*.md, with fixed timestamps and sorted
+# entries, so the same sources give the same bytes (the stamp only appears in the file name).
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+eval "$("$root/scripts/version")"
+go run ./scripts/docgen generate >/dev/null
+go run ./scripts/docgen check
+mkdir -p dist
+out="dist/lumen-docs_${VERSION}_${ARTIFACT_SUFFIX}.zip"
+go run ./scripts/docgen bundle "$out"
+echo "packaged $out"

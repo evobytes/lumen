@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run the app in the foreground with the dev config: scripts/dev [extra flags]
+# (make dev). Listens on 127.0.0.1:18765 so it never collides with a real instance.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+exec go run ./cmd/lumen -config dev/config.toml "$@"

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Fail if `go mod tidy` would change go.mod/go.sum (works without git history).
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+cp go.mod go.sum "$tmp/"
+go mod tidy
+if ! cmp -s go.mod "$tmp/go.mod" || ! cmp -s go.sum "$tmp/go.sum"; then
+  cp "$tmp/go.mod" "$tmp/go.sum" .
+  echo "go.mod/go.sum are not tidy; run 'go mod tidy' and commit" >&2
+  exit 1
+fi
+go mod verify
+echo "go.mod tidy and verified"

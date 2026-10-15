@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen control</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/control.js"></script>
+</head>
+<body>
+<h1>Lumen</h1>
+<section>
+  <small id="pos"></small>
+  <div id="cur"></div>
+  <div class="row">
+    <button id="prev" type="button">&#9664; Prev</button>
+    <button id="blank" type="button">Blank</button>
+    <button id="next" type="button">Next &#9654;</button>
+  </div>
+  <div id="error" class="error" role="alert"></div>
+</section>
+<section><b>Slides</b><ol id="slides"></ol></section>
+<section>
+  <b>Output</b>
+  <div class="row" id="screens"></div>
+  <div class="row"><button id="float" type="button">Floating window</button></div>
+</section>
+<section><b>Windows (ground truth from the OS)</b><pre id="win"></pre></section>
+</body>
+</html>

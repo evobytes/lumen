@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lumen control</title>
+<style>
+  :root{color-scheme:light dark;font:15px "Segoe UI",system-ui,sans-serif}
+  body{margin:0;padding:16px;display:grid;gap:12px;max-width:900px}
+  h1{font-size:1.2rem;margin:0} section{border:1px solid #8884;border-radius:10px;padding:12px}
+  button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #8886;cursor:pointer}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  pre{margin:0;overflow:auto;max-height:240px;font-size:12px}
+  #cur{font-size:1.4rem;white-space:pre-wrap;min-height:3.2em}
+</style></head>
+<body>
+<h1>Lumen spike — control</h1>
+<section><div id="pos"></div><div id="cur"></div>
+  <div class="row"><button id="prev">◀ Prev</button><button id="blank">Blank</button><button id="next">Next ▶</button></div></section>
+<section><b>Output</b>
+  <div class="row" id="screens"></div>
+  <div class="row"><button id="float">Floating window</button></div></section>
+<section><b>Windows (ground truth from Win32)</b><pre id="win"></pre></section>
+<script>
+const j = (p, m = "GET", b) => fetch("/api/v1" + p, {method: m, headers: {"Content-Type": "application/json"},
+  body: b ? JSON.stringify(b) : undefined}).then(r => r.json());
+async function refresh() {
+  const st = await j("/status");
+  pos.textContent = st.count ? `Slide ${st.index + 1} of ${st.count}` : "No slides";
+  cur.textContent = st.slide ? st.slide.text : "";
+  blank.style.fontWeight = st.blanked ? "700" : "400";
+  win.textContent = JSON.stringify(await j("/windows"), null, 1);
+}
+async function init() {
+  const screens = await j("/screens");
+  screensEl = document.getElementById("screens");
+  for (const s of screens) for (const mode of ["win32", "wails"]) {
+    const b = document.createElement("button");
+    b.textContent = `${s.id.replace("\\\\.\\", "")} ${s.rect.w}×${s.rect.h} @${Math.round(s.scale * 100)}% — ${mode}`;
+    b.onclick = () => j("/output", "PUT", {screen: s.id, mode}).then(refresh);
+    screensEl.append(b);
+  }
+}
+prev.onclick = () => j("/prev", "POST").then(refresh);
+next.onclick = () => j("/next", "POST").then(refresh);
+blank.onclick = () => j("/blank", "POST", {}).then(refresh);
+float.onclick = () => j("/output", "PUT", {screen: null}).then(refresh);
+init(); refresh(); new EventSource("/api/v1/events").addEventListener("state", refresh);
+</script></body></html>

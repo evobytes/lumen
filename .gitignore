@@ -1,0 +1,13 @@
+# build output and local tooling (all repo-local by design: see AGENTS.md)
+dist/
+.tools/
+.cache/
+.ref/
+dev/data/
+*.test
+coverage.out
+.env
+.env.*
+# per-spike build output
+spikes/**/bin/
+*.syso

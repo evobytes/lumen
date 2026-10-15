@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lumen output</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;cursor:none;
+    font-family:"Segoe UI",system-ui,sans-serif}
+  #slide{position:absolute;inset:6%;display:flex;align-items:center;justify-content:center;
+    text-align:center;white-space:pre-wrap;line-height:1.15;font-size:8vmin}
+  body.blank #slide{visibility:hidden}
+</style></head>
+<body><div id="slide"></div><div id="dbg"></div>
+<script>
+// Output = pure function of server state. Re-read on every SSE "state" event.
+const post = (name, body) => fetch("/api/v1/report/" + name,
+  {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+const slide = document.getElementById("slide");
+if (new URLSearchParams(location.search).has("debug")) {
+  document.body.style.background = "#123a6b";
+  const d = document.getElementById("dbg");
+  d.style.cssText = "position:fixed;left:12px;top:8px;font:16px monospace;color:#9fe";
+  const tick = () => d.textContent = `${innerWidth}x${innerHeight} dpr=${devicePixelRatio} vis=${document.visibilityState} ${new Date().toLocaleTimeString()}`;
+  tick(); setInterval(tick, 500);
+}
+async function render() {
+  const st = await (await fetch("/api/v1/status")).json();
+  slide.textContent = st.slide ? st.slide.text : "";
+  document.body.classList.toggle("blank", st.blanked);
+  const r = slide.getBoundingClientRect(), cs = getComputedStyle(slide);
+  post("render", {text: slide.textContent, rect: [r.x, r.y, r.width, r.height], color: cs.color, fontSize: cs.fontSize,
+    visibility: cs.visibility, bodyBg: getComputedStyle(document.body).backgroundColor,
+    inner: [innerWidth, innerHeight], dpr: devicePixelRatio, docVisibility: document.visibilityState, t: Date.now()});
+}
+render();
+const es = new EventSource("/api/v1/events");
+es.addEventListener("state", render);
+
+// ---- media probe (only with ?probe): what can this webview actually play? ----
+
+async function playTest(src, alpha) {
+  const v = document.createElement("video");
+  v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = src;
+  const out = {src};
+  try {
+    await Promise.race([v.play(), new Promise((_, rej) => setTimeout(() => rej(new Error("play() timeout")), 5000))]);
+    await new Promise(r => setTimeout(r, 900));
+    out.currentTime = +v.currentTime.toFixed(2);
+    out.videoWidth = v.videoWidth;
+    out.ok = v.currentTime > 0.2 && v.videoWidth > 0;
+    if (alpha && out.ok) {
+      const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+      const g = c.getContext("2d"); g.drawImage(v, 0, 0);
+      out.alphaSample = g.getImageData(10, 10, 1, 1).data[3]; // 255 = opaque; ~128 = alpha decoded
+    }
+  } catch (e) { out.ok = false; out.error = String(e.message || e); }
+  if (v.error) out.mediaError = {code: v.error.code, message: v.error.message};
+  v.removeAttribute("src"); v.load();
+  return out;
+}
+
+async function probe() {
+  if (document.visibilityState !== "visible")
+    await new Promise(r => document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && r()));
+  const types = {
+    "h264+aac (mp4)": 'video/mp4; codecs="avc1.640028,mp4a.40.2"',
+    "h264 baseline": 'video/mp4; codecs="avc1.42E01E"',
+    "hevc (hvc1)": 'video/mp4; codecs="hvc1.1.6.L93.B0"',
+    "av1": 'video/mp4; codecs="av01.0.05M.08"',
+    "vp8": 'video/webm; codecs="vp8"',
+    "vp9+opus (webm)": 'video/webm; codecs="vp9,opus"',
+    "aac audio": 'audio/mp4; codecs="mp4a.40.2"',
+    "mp3": "audio/mpeg", "opus (ogg)": 'audio/ogg; codecs="opus"', "flac": "audio/flac",
+  };
+  const probe = document.createElement("video");
+  const canPlay = Object.fromEntries(Object.entries(types).map(([k, t]) => [k, probe.canPlayType(t) || "no"]));
+  let outputs = null;
+  try { outputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audiooutput").length; }
+  catch (e) { outputs = "error: " + e.message; }
+  const clips = ["h264_aac.mp4", "vp9_opus.webm", "hevc.mp4", "av1.mp4"];
+  const playback = {};
+  for (const c of clips) playback[c] = await playTest("/media/" + c);
+  playback["vp9_alpha.webm"] = await playTest("/media/vp9_alpha.webm", true);
+  await post("media", {
+    userAgent: navigator.userAgent, canPlayType: canPlay, playback,
+    setSinkId: typeof HTMLMediaElement.prototype.setSinkId, audioOutputDevices: outputs,
+    page: {dpr: devicePixelRatio, screen: [screen.width, screen.height], inner: [innerWidth, innerHeight],
+           screenXY: [screenX, screenY], visibility: document.visibilityState},
+  });
+}
+if (new URLSearchParams(location.search).has("probe")) probe();
+</script></body></html>

@@ -1,0 +1,15 @@
+{
+  "fixed": {
+    "file_version": "@VERSION@"
+  },
+  "info": {
+    "0000": {
+      "ProductVersion": "@VERSION@",
+      "CompanyName": "Evobytes Consulting Ltd",
+      "FileDescription": "Lumen presentation projector",
+      "LegalCopyright": "Copyright 2026 Evobytes Consulting Ltd",
+      "ProductName": "Lumen",
+      "Comments": "Control window, floating output window and an embedded web API"
+    }
+  }
+}

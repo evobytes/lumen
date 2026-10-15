@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Build the Windows installer with Inno Setup: scripts/build-windows-installer [amd64|arm64]
+# Output: dist/lumen_<x.x.x>_windows-<arch>_<yyyymmdd-hhmmss>-<githash>.exe
+# Needs Windows with Inno Setup 6.3+ (ISCC.exe) and Git Bash (cygpath). Set ISCC to its
+# path if it is not in a standard install location. The script is packaging/windows/lumen.iss.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+goarch=${1:-amd64}
+eval "$("$root/scripts/version")"
+
+find_iscc() {
+  if [[ -n ${ISCC:-} ]]; then echo "$ISCC"; return; fi
+  local c
+  for c in "/c/Program Files (x86)" "/c/Program Files" "${LOCALAPPDATA:-}/Programs"; do
+    [[ -n $c && -x "$c/Inno Setup 6/ISCC.exe" ]] && { echo "$c/Inno Setup 6/ISCC.exe"; return; }
+  done
+  command -v iscc 2>/dev/null || command -v ISCC.exe 2>/dev/null || true
+}
+iscc=$(find_iscc)
+[[ -n $iscc ]] || { echo "build-windows-installer: Inno Setup 6 (ISCC.exe) not found; install it on this Windows host or set ISCC=<path>" >&2; exit 1; }
+command -v cygpath >/dev/null || { echo "build-windows-installer: needs Git Bash (cygpath) on Windows" >&2; exit 1; }
+
+# COPYRIGHT is the single source for the holder and year: one line, "Copyright YYYY[-YYYY] Holder".
+copyright=$(tr -d '\r' <"$root/COPYRIGHT" | head -n1)
+re='^Copyright [0-9]{4}(-[0-9]{4})? (.+)$'
+[[ $copyright =~ $re ]] || { echo "build-windows-installer: COPYRIGHT must be 'Copyright YYYY Holder', got '$copyright'" >&2; exit 1; }
+holder=${BASH_REMATCH[2]}
+
+"$root/scripts/build-binary" windows "$goarch"
+exe="$root/dist/bin/lumen_windows_${goarch}.exe"
+base="lumen_${VERSION}_windows-${goarch}_${ARTIFACT_SUFFIX}"
+rm -f "$root/dist/$base.exe"
+
+# MSYS would rewrite /D... arguments that look like paths; pass them verbatim.
+MSYS2_ARG_CONV_EXCL='*' "$iscc" /Q \
+  "/DAppVersion=$VERSION" "/DArch=$goarch" \
+  "/DCopyright=$copyright" "/DPublisher=$holder" \
+  "/DSourceExe=$(cygpath -w "$exe")" \
+  "/DRepoRoot=$(cygpath -w "$root")" \
+  "/DOutputDir=$(cygpath -w "$root/dist")" "/DOutputBase=$base" \
+  "$(cygpath -w "$root/packaging/windows/lumen.iss")"
+echo "packaged $root/dist/$base.exe"

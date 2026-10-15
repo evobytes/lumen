@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Build the console binary for this host and drive the real app with -selftest:
+#   scripts/selftest            (make selftest)
+# Output: dist/selftest/report.json and an exit code (0 = every placement exact, output topmost).
+#
+# It opens real windows and places the output over each monitor in turn, so run it where you can
+# afford that. On a headless Linux box wrap it in xvfb-run (CI does); on Windows use Git Bash.
+# Anything the app writes outside the repo (WebView2/WebKit profile) is the app's own state, not
+# the build's: point XDG_DATA_HOME / XDG_CACHE_HOME / XDG_CONFIG_HOME at a scratch directory to
+# contain it on Linux.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+os=$(go env GOHOSTOS) arch=$(go env GOHOSTARCH)
+ext=""; [[ $os == windows ]] && ext=".exe"
+
+"$root/scripts/build-binary" "$os" "$arch" console
+exe="$root/dist/bin/lumen-console_${os}_${arch}${ext}"
+mkdir -p dist/selftest
+report="$root/dist/selftest/report.json"
+rm -f "$report"
+
+# The app is a Windows executable under Git Bash: give it a Windows path for the report.
+rpath=$report
+[[ $os == windows ]] && rpath=$(cygpath -w "$report")
+set +e
+timeout 180 "$exe" -selftest -report "$rpath" -log-level info
+code=$?
+set -e
+[[ -f $report ]] || { echo "selftest: no report written (exit $code)" >&2; exit 1; }
+echo "selftest exit=$code; report: $report"
+exit "$code"

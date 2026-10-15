@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Build the portable Windows zip: scripts/build-windows-zip [amd64|arm64]   (default amd64)
+# Output: dist/lumen_<x.x.x>_windows-<arch>_<yyyymmdd-hhmmss>-<githash>.zip
+# Pure Go cross-compile: works from any host. The installer (build-windows-installer) is
+# the supported install path; the zip is for portable use and CI smoke tests.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+goarch=${1:-amd64}
+eval "$("$root/scripts/version")"
+cd "$root"
+for f in LICENSE NOTICE THIRD_PARTY_NOTICES.md README.md packaging/windows/config.example.toml; do
+  [[ -f $f ]] || { echo "missing $f; run 'make docs'" >&2; exit 1; }
+done
+
+"$root/scripts/build-binary" windows "$goarch"
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT
+install -m 0755 "dist/bin/lumen_windows_${goarch}.exe" "$stage/lumen.exe"
+install -m 0644 packaging/windows/config.example.toml "$stage/config.example.toml"
+for f in README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md; do install -m 0644 "$f" "$stage/$f"; done
+
+out="$root/dist/lumen_${VERSION}_windows-${goarch}_${ARTIFACT_SUFFIX}.zip"
+rm -f "$out"
+if command -v zip >/dev/null; then
+  (cd "$stage" && zip -q -X "$out" lumen.exe config.example.toml README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md)
+else # Git Bash ships no zip; PowerShell does
+  powershell.exe -NoProfile -Command "Compress-Archive -Path '$(cygpath -w "$stage")\\*' -DestinationPath '$(cygpath -w "$out")'"
+fi
+echo "packaged $out"

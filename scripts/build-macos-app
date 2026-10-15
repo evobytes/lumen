@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Build Lumen.app and a zip of it (macOS, Apple Silicon): scripts/build-macos-app
+# Output: dist/lumen_<x.x.x>_macos-arm64_<yyyymmdd-hhmmss>-<githash>.zip
+# Wails needs CGO (Cocoa + WebKit), so this builds natively on macOS. The bundle is unsigned
+# and not notarised (Gatekeeper will warn on first launch); signing is a later decision.
+# macOS is a secondary target: this script is exercised only by the CI `macos` job.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+eval "$("$root/scripts/version")"
+[[ $(go env GOHOSTOS) == darwin ]] || { echo "build-macos-app must run on macOS" >&2; exit 1; }
+goarch=$(go env GOHOSTARCH)
+copyright=$(tr -d '\r' <COPYRIGHT | head -n1)
+
+"$root/scripts/build-binary" darwin "$goarch"
+app="dist/Lumen.app"
+rm -rf "$app"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+install -m 0755 "dist/bin/lumen_darwin_${goarch}" "$app/Contents/MacOS/lumen"
+sed -e "s/@VERSION@/$VERSION/g" -e "s/@COPYRIGHT@/$copyright/g" packaging/macos/Info.plist.in >"$app/Contents/Info.plist"
+for f in LICENSE NOTICE THIRD_PARTY_NOTICES.md; do install -m 0644 "$f" "$app/Contents/Resources/$f"; done
+
+out="dist/lumen_${VERSION}_macos-${goarch}_${ARTIFACT_SUFFIX}.zip"
+rm -f "$out"
+ditto -c -k --keepParent "$app" "$out" # ditto preserves what an .app bundle needs
+echo "packaged $out"

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lumen
+GenericName=Presentation projector
+Comment=Project lyrics, slides and media to a second screen
+Exec=lumen
+Icon=lumen
+Terminal=false
+Categories=AudioVideo;Presentation;
+StartupWMClass=lumen

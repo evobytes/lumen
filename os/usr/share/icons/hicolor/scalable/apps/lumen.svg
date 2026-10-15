@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>Lumen</title>
+  <rect width="128" height="128" rx="24" fill="#123a6b"/>
+  <circle cx="64" cy="64" r="26" fill="#ffd54a"/>
+  <g stroke="#ffd54a" stroke-width="6" stroke-linecap="round">
+    <path d="M64 14v16M64 98v16M14 64h16M98 64h16M29 29l11 11M88 88l11 11M99 29L88 40M40 88L29 99"/>
+  </g>
+</svg>

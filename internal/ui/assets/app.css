@@ -1,0 +1,12 @@
+:root { color-scheme: light dark; font: 15px "Segoe UI", system-ui, sans-serif; }
+body { margin: 0; padding: 16px; display: grid; gap: 12px; max-width: 900px; }
+h1 { font-size: 1.2rem; margin: 0; }
+section { border: 1px solid #8884; border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #8886; cursor: pointer; }
+button.on { font-weight: 700; outline: 2px solid currentColor; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+pre { margin: 0; overflow: auto; max-height: 240px; font-size: 12px; }
+#cur { font-size: 1.4rem; white-space: pre-wrap; min-height: 3.2em; }
+ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+ol button { width: 100%; text-align: left; }
+.error { color: #c0392b; }

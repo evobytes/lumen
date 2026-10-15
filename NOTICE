@@ -1,0 +1,12 @@
+Lumen
+Copyright 2026 Evobytes Consulting Ltd
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It links third-party Go modules under their own licences; the full list with
+licence texts is in THIRD_PARTY_NOTICES.md (installed next to this file in the
+packages).
+
+It does not include or redistribute the NDI runtime, GStreamer, FFmpeg, OBS or any
+Blackmagic software. Optional integrations load or run them as separate, user-installed
+programs under their own licences.

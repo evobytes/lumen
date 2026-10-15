@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Build the Linux .deb: scripts/build-deb [amd64|arm64]   (default: the host architecture)
+# Output: dist/lumen_<x.x.x>_<arch>_<yyyymmdd-hhmmss>-<githash>.deb
+#
+# Wails needs CGO (GTK4 + WebKitGTK 6), so this builds natively: run it on a Linux host
+# of the target architecture with libgtk-4-dev and libwebkitgtk-6.0-dev installed
+# (CI uses ubuntu-24.04 and ubuntu-24.04-arm). Needs `make bootstrap` (nfpm).
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+export PATH="$root/.tools/bin:$PATH"
+cd "$root"
+goarch=${1:-$(go env GOHOSTARCH)}
+eval "$("$root/scripts/version")"
+export VERSION GOARCH=$goarch
+
+[[ $(go env GOHOSTOS) == linux ]] || { echo "build-deb must run on Linux" >&2; exit 1; }
+command -v nfpm >/dev/null || { echo "nfpm not found; run 'make bootstrap'" >&2; exit 1; }
+for f in packaging/copyright LICENSE NOTICE THIRD_PARTY_NOTICES.md; do
+  [[ -f $f ]] || { echo "missing $f; run 'make docs'" >&2; exit 1; }
+done
+
+"$root/scripts/build-binary" linux "$goarch"
+mkdir -p dist/pkg
+install -m 0755 "dist/bin/lumen_linux_${goarch}" dist/pkg/lumen
+out="dist/lumen_${VERSION}_${goarch}_${ARTIFACT_SUFFIX}.deb"
+
+# Everything under os/ ships: nfpm globs flatten paths, so list each file explicitly.
+spec=dist/pkg/nfpm.yaml
+cp packaging/nfpm.yaml "$spec"
+(cd os && find . -type f ! -name .gitkeep | sort | sed 's|^\./||') | while read -r f; do
+  mode=0644
+  printf '\n  - src: os/%s\n    dst: /%s\n    file_info:\n      mode: %s\n' "$f" "$f" "$mode" >>"$spec"
+done
+
+nfpm package --config "$spec" --packager deb --target "$out"
+echo "packaged $out"

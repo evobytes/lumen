@@ -1,0 +1,6 @@
+# Used by `make dev`: a second instance on its own port, so it never collides with a real one.
+[server]
+listen = "127.0.0.1:18765"
+
+[log]
+level = "debug"

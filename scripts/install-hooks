@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Point git at the repo's tracked hooks (.githooks). Safe to re-run.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+[[ -d .git ]] || { echo "not a git checkout; skipping hook install" >&2; exit 0; }
+chmod +x .githooks/*
+git config core.hooksPath .githooks
+echo "git hooks installed (core.hooksPath=.githooks): pre-commit regenerates and stages docs"

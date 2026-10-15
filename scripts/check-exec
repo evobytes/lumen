@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Fail if a tracked script is not stored as executable (mode 100755) in git.
+# Windows cannot show the bit, so a script added there runs locally but fails
+# with "Permission denied" on a Linux checkout. Reads the index, not the disk.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "not a git checkout; skipping executable-bit check"
+  exit 0
+fi
+# Everything under scripts/ and .githooks/ must be executable except Go sources, env files, docs and PowerShell.
+bad=$(git ls-files -s -- 'scripts/*' '.githooks/*' | awk '$1 != "100755" && $4 !~ /\.(go|env|md|ps1)$/ { print $4 }')
+if [[ -n $bad ]]; then
+  echo "scripts not stored as executable; run: git update-index --chmod=+x <file>" >&2
+  printf '  %s\n' $bad >&2
+  exit 1
+fi
+echo "tracked scripts are executable"
