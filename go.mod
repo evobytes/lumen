@@ -5,7 +5,7 @@ go 1.26.9
 require (
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/wailsapp/wails/v3 v3.0.0-beta.29
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 )
 
 require (
